@@ -36,12 +36,8 @@ npm test
 
 ## البناء
 
-ملف التنصيب (NSIS) ينبني تلقائياً بـ GitHub Actions وينزل بالـ Releases عند رفع tag:
-
-```
-git tag v1.0.0
-git push origin v1.0.0
-```
+ملف التنصيب (NSIS) ينبني تلقائياً بـ GitHub Actions مع كل دفع على `main`، وينزل بالـ Releases باسم `v<version>` من package.json.
+حتى تطلع نسخة جديدة: غيّر `"version"` بـ package.json (مثلاً 1.0.1) وادفع.
 
 ## حول
 
