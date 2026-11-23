@@ -1,0 +1,83 @@
+{
+  "name": "ibra-3d",
+  "productName": "IBRA 3D",
+  "version": "1.0.0",
+  "description": "IBRA 3D - تحويل الصور الى مجسمات ثلاثية الابعاد GLB مجاناً",
+  "main": "src/main.mjs",
+  "author": "Ibrahim Al-Khazraji (ibraprogram)",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.mjs",
+    "dist": "electron-builder --win nsis",
+    "release": "electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "@google/model-viewer": "^4.4.0",
+    "@gradio/client": "^2.8.0",
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.0.0",
+    "gltf-validator": "^2.0.0-dev.3.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ibrata2/ibra-3d.git"
+  },
+  "homepage": "https://ibraprogram.netlify.app/",
+  "build": {
+    "appId": "com.ibraprogram.ibra3d",
+    "productName": "IBRA 3D",
+    "artifactName": "IBRA-3D-Setup-${version}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json",
+      "!src/selftest.mjs"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "IBRA 3D",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "language": "1025",
+      "multiLanguageInstaller": true,
+      "installerLanguages": [
+        "ar_SA",
+        "en_US"
+      ],
+      "uninstallDisplayName": "IBRA 3D"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ibrata2",
+        "repo": "ibra-3d",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

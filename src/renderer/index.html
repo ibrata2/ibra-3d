@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>IBRA 3D</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="../../node_modules/@google/model-viewer/dist/model-viewer.min.js"></script>
+</head>
+<body>
+  <div class="bg-orbs"><span></span><span></span><span></span></div>
+
+  <header class="topbar glass">
+    <div class="brand">
+      <img src="../../build/icon.png" alt="" class="brand-icon">
+      <div>
+        <div class="brand-name">IBRA <b>3D</b></div>
+        <div class="brand-sub">من صورة الى مجسم GLB — مجاناً</div>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-view="convert" class="active">التحويل</button>
+      <button data-view="library">المكتبة</button>
+      <button data-view="settings">الإعدادات</button>
+      <button data-view="about">حول</button>
+    </nav>
+  </header>
+
+  <!-- ================= التحويل ================= -->
+  <main id="view-convert" class="view active">
+    <aside class="side">
+      <section class="glass card">
+        <div id="drop" class="drop" tabindex="0">
+          <div class="drop-icon">⬆</div>
+          <div class="drop-title">اسحب الصور هنا</div>
+          <div class="drop-sub">PNG · JPG · WEBP — تكدر تحط أكثر من صورة</div>
+          <button class="btn ghost small" id="pick">أو اختار من الحاسبة</button>
+        </div>
+      </section>
+
+      <section class="glass card">
+        <h3>الخيارات</h3>
+        <label class="field">
+          <span>محرك التحويل</span>
+          <select id="opt-engine"></select>
+          <small id="engine-note" class="muted"></small>
+        </label>
+        <label class="switch"><input type="checkbox" id="opt-rembg"><i></i><span>إزالة الخلفية تلقائياً</span></label>
+        <label class="switch" id="tex-wrap"><input type="checkbox" id="opt-texture"><i></i><span>تكستشر (ألوان المجسم)</span></label>
+        <small id="tex-note" class="muted hidden">هذا المحرك يطلع المجسم بالتكستشر دائماً.</small>
+        <div class="row2">
+          <label class="field">
+            <span>عدد المضلعات</span>
+            <input type="number" id="opt-faces" min="1000" max="500000" step="1000">
+          </label>
+          <label class="field">
+            <span>Seed</span>
+            <input type="number" id="opt-seed" min="0" placeholder="عشوائي">
+          </label>
+        </div>
+        <div class="faces-presets">
+          <button data-f="10000">10K</button><button data-f="30000">30K ألعاب</button><button data-f="60000">60K</button><button data-f="100000">100K</button>
+        </div>
+      </section>
+
+      <section class="glass card queue-card">
+        <div class="queue-head">
+          <h3>الطابور <span id="queue-count" class="pill">0</span></h3>
+          <div class="queue-actions">
+            <button class="btn gold small" id="start">ابدأ التحويل</button>
+            <button class="btn ghost small" id="clear-done" title="امسح المكتملة">مسح</button>
+          </div>
+        </div>
+        <div id="pause-banner" class="banner hidden"></div>
+        <ul id="queue" class="queue"></ul>
+      </section>
+    </aside>
+
+    <section class="stage glass">
+      <div id="empty-stage" class="empty-stage">
+        <div class="big-3d">3D</div>
+        <p>حط صورة جسم واحد بخلفية بسيطة، والتطبيق يحولها لمجسم GLB تكدر تستخدمه بألعابك.</p>
+      </div>
+      <div id="result" class="result hidden">
+        <div class="result-head">
+          <div>
+            <div id="res-title" class="res-title"></div>
+            <div id="res-meta" class="muted"></div>
+          </div>
+          <div class="result-actions">
+            <button class="btn gold" id="act-save">حفظ بالمكتبة</button>
+            <button class="btn ghost" id="act-saveas">حفظ باسم…</button>
+            <div class="dropdown">
+              <button class="btn ghost" id="act-retry">إعادة بمحرك ثاني ▾</button>
+              <div class="menu glass hidden" id="retry-menu"></div>
+            </div>
+            <button class="btn ghost" id="act-folder">فتح المجلد</button>
+          </div>
+        </div>
+        <div class="compare">
+          <figure class="orig glass">
+            <img id="res-img" alt="">
+            <figcaption>الصورة الأصلية</figcaption>
+          </figure>
+          <figure class="viewer glass">
+            <model-viewer id="res-model" camera-controls auto-rotate shadow-intensity="1" exposure="1.05"
+              environment-image="neutral" interaction-prompt="none" touch-action="pan-y"></model-viewer>
+            <figcaption>المجسم — دوّر بالماوس وكبّر بالعجلة</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= المكتبة ================= -->
+  <main id="view-library" class="view">
+    <section class="glass card lib-toolbar">
+      <div class="lib-path">
+        <b>IBRA-3D-LIBRARY</b>
+        <span id="lib-dir" class="muted">ما مختار مجلد</span>
+      </div>
+      <input type="search" id="lib-search" placeholder="بحث بالرمز أو الاسم…">
+      <div class="lib-btns">
+        <button class="btn ghost small" id="lib-pick">اختيار المجلد</button>
+        <button class="btn ghost small" id="lib-open">فتح المجلد</button>
+        <button class="btn gold small" id="lib-export">تصدير ZIP</button>
+      </div>
+    </section>
+    <div id="lib-filters" class="chips"></div>
+    <div id="lib-empty" class="lib-empty glass hidden"></div>
+    <div id="lib-grid" class="lib-grid"></div>
+  </main>
+
+  <!-- ================= الإعدادات ================= -->
+  <main id="view-settings" class="view">
+    <section class="glass card settings">
+      <h3>توكن Hugging Face (اختياري)</h3>
+      <p class="muted">بدون توكن، Hugging Face يعطي عدد تحويلات قليل يومياً. سوّي حساب مجاني على huggingface.co، وروح Settings ← Access Tokens، وسوّي توكن نوع <b>Read</b> وحطه هنا. ينحفظ مشفّر على حاسبتك بس، وما ينرسل لأي مكان غير Hugging Face.</p>
+      <div class="row-inline">
+        <input type="password" id="set-token" placeholder="hf_..." autocomplete="off" spellcheck="false">
+        <button class="btn ghost small" id="set-token-show">إظهار</button>
+        <button class="btn ghost small" id="set-token-clear">مسح</button>
+      </div>
+      <button class="btn link" id="hf-link">افتح صفحة التوكنات بـ Hugging Face ↗</button>
+
+      <h3>عند خلوص الحد المجاني</h3>
+      <label class="switch"><input type="checkbox" id="set-fallback"><i></i><span>حوّل تلقائياً بالمحرك الثاني بدون ما يسألني</span></label>
+
+      <h3>مجلد المكتبة</h3>
+      <div class="row-inline">
+        <span id="set-lib" class="muted mono">—</span>
+        <button class="btn ghost small" id="set-lib-pick">تغيير</button>
+      </div>
+
+      <div class="settings-foot">
+        <button class="btn gold" id="set-save">حفظ الإعدادات</button>
+        <span id="set-saved" class="ok hidden">انحفظت ✓</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= حول ================= -->
+  <main id="view-about" class="view">
+    <section class="glass card about">
+      <img src="../../build/icon.png" class="about-icon" alt="">
+      <h2>IBRA 3D</h2>
+      <p class="muted">تحويل الصور الى مجسمات ثلاثية الأبعاد بصيغة GLB — مجاني بالكامل</p>
+      <p class="credit">برمجة وتطوير ابراهيم الخزرجي</p>
+      <div class="links">
+        <button class="btn gold" data-url="https://ibraprogram.netlify.app/">موقع تطبيقاتي</button>
+        <button class="btn ghost" data-url="https://t.me/ibraprogram">تليكرام</button>
+        <button class="btn ghost" data-url="https://www.tiktok.com/@ibraprogram">تيك توك: ibraprogram</button>
+      </div>
+      <p class="muted small-print">ibraprogram.netlify.app · t.me/ibraprogram · TikTok: ibraprogram</p>
+      <p class="muted small-print">المحركات: Hunyuan3D 2.1 و Hunyuan3D 2 (Tencent) و TRELLIS.2 (Microsoft) عن طريق Hugging Face Spaces. كل محرك له رخصته الخاصة.</p>
+      <p class="muted small-print" id="version"></p>
+    </section>
+  </main>
+
+  <!-- ================= نافذة الحفظ ================= -->
+  <div class="modal hidden" id="save-modal">
+    <div class="modal-box glass">
+      <h3>حفظ المجسم بالمكتبة</h3>
+      <label class="field"><span>النوع</span><select id="sv-type"></select></label>
+      <label class="field"><span>الرمز</span><input id="sv-code" class="mono" maxlength="5"></label>
+      <label class="field"><span>الاسم بالعربي</span><input id="sv-ar" placeholder="مثلاً: سيارة كامري"></label>
+      <label class="field"><span>الاسم بالانكليزي</span><input id="sv-en" dir="ltr" placeholder="e.g. Camry car"></label>
+      <div id="sv-err" class="err hidden"></div>
+      <div class="modal-actions">
+        <button class="btn gold" id="sv-ok">حفظ</button>
+        <button class="btn ghost" data-close>إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="confirm-modal">
+    <div class="modal-box glass">
+      <h3 id="cf-title"></h3>
+      <p id="cf-text" class="muted pre"></p>
+      <div class="modal-actions" id="cf-actions"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
