@@ -36,22 +36,26 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      # electron-builder ما يكدر ينشر release بدون tag موجود، فنسوي الـ tag أولاً
-      - name: Create tag v<version> if missing
-        shell: bash
-        run: |
-          V="v$(node -p "require('./package.json').version")"
-          git fetch --tags --quiet
-          if git rev-parse -q --verify "refs/tags/$V" >/dev/null; then
-            echo "tag $V exists"
-          else
-            git tag "$V" && git push origin "$V"
-          fi
+      - name: Build NSIS installer
+        run: npx electron-builder --win nsis --publish never
 
-      - name: Build NSIS installer and publish to Releases
-        run: npx electron-builder --win nsis --publish always
+      # النشر بخطوة وحدة: release واحد لكل إصدار بيه EXE و latest.yml و blockmap.
+      # إذا نفس الإصدار منشور سابقاً (أو مكرر من محاولة قديمة) ينحذف وينعاد نشره نظيف.
+      - name: Publish release v<version>
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V="v$(node -p "require('./package.json').version")"
+          for id in $(gh api "repos/${{ github.repository }}/releases?per_page=100" --jq ".[] | select(.tag_name==\"$V\") | .id"); do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/$id"
+          done
+          shopt -s nullglob
+          files=(dist/*.exe dist/*.blockmap dist/latest.yml)
+          echo "assets: ${files[*]}"
+          gh release create "$V" "${files[@]}" \
+            --target "${{ github.sha }}" --title "IBRA 3D $V" \
+            --notes "IBRA 3D $V — تحويل الصور الى مجسمات GLB مجاناً. حمّل IBRA-3D-Setup-${V#v}.exe ونصّبه."
 
       - uses: actions/upload-artifact@v4
         with:
