@@ -9,21 +9,25 @@ export const ENGINES = [
     name: 'Hunyuan3D 2.1',
     space: 'tencent/Hunyuan3D-2.1',
     note: 'الافتراضي — نفس المحرك اللي انسوت بيه المكتبة',
-    supports: { rembg: true, textureToggle: true }
+    supports: { rembg: true, textureToggle: true },
+    // ثواني ZeroGPU اللي يطلبها المحرك بأول طلب (من @spaces.GPU بكود الـ Space)
+    gpu: { shape: 60, texture: 180 }
   },
   {
     id: 'trellis2',
     name: 'TRELLIS.2 (Microsoft)',
     space: 'microsoft/TRELLIS.2',
     note: 'جودة عالية، التكستشر دائماً مشمول، وأقل عدد مضلعات 100 ألف',
-    supports: { rembg: true, textureToggle: false }
+    supports: { rembg: true, textureToggle: false },
+    gpu: { shape: 120, texture: 120 }
   },
   {
     id: 'hunyuan2',
     name: 'Hunyuan3D 2',
     space: 'tencent/Hunyuan3D-2',
     note: 'احتياط',
-    supports: { rembg: true, textureToggle: true }
+    supports: { rembg: true, textureToggle: true },
+    gpu: { shape: 60, texture: 180 }
   }
 ];
 

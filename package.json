@@ -1,7 +1,7 @@
 {
   "name": "ibra-3d",
   "productName": "IBRA 3D",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "IBRA 3D - تحويل الصور الى مجسمات ثلاثية الابعاد GLB مجاناً",
   "main": "src/main.mjs",
   "author": "Ibrahim Al-Khazraji (ibraprogram)",

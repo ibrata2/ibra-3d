@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('ibra', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (s) => ipcRenderer.invoke('settings:save', s),
   engines: () => ipcRenderer.invoke('engines:list'),
+  checkToken: () => ipcRenderer.invoke('token:check'),
 
   // التحويل
   pathForFile: (file) => webUtils.getPathForFile(file),

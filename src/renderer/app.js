@@ -51,7 +51,7 @@ async function init() {
   bindLibrary();
   bindSettings();
   $$('[data-url]').forEach(b => b.addEventListener('click', () => ibra.openExternal(b.dataset.url)));
-  $('#version').textContent = 'الإصدار 1.0.1';
+  $('#version').textContent = 'الإصدار 1.0.2';
 
   ibra.onProgress(onProgress);
 }
@@ -260,8 +260,18 @@ async function runOne(job) {
     job.status = 'fail';
     job.error = res.error;
     job.text = res.error?.title || 'فشل';
-    const fb = nextEngineFor(job);
-    if (['quota', 'busy', 'timeout', 'sleeping'].includes(res.error?.kind)) {
+    let fb = nextEngineFor(job);
+    if (res.error?.kind === 'quota') {
+      const fit = quotaOptions(job, res.error).find(o => o.kind === 'engine');
+      fb = fit ? fit.id : null;
+    }
+    if (res.error?.kind === 'quota' && !quotaOptions(job, res.error).length) {
+      // الوقت المشترك خلص: نوقف كل الطابور بدل ما تفشل الصور الباقية وحدة ورا الثانية
+      if (state.queue.some(q => q.status === 'wait')) {
+        state.paused = { engineId: job.engineId, info: res.error, exhausted: true };
+        renderBanner();
+      }
+    } else if (['quota', 'busy', 'timeout', 'sleeping'].includes(res.error?.kind)) {
       if (state.settings.autoFallback && fb && !job.fallbackFrom) {
         toast(`${res.error.title} — يحوّل تلقائياً بـ ${engineName(fb)}`, 4000);
         const copy = { ...job, id: 'j' + (++uid) + '_' + Date.now(), engineId: fb, status: 'wait', pct: 0, text: '', error: null, fallbackFrom: job.engineId };
@@ -274,6 +284,27 @@ async function runOne(job) {
     }
   }
   renderQueue();
+}
+
+// ثواني ZeroGPU اللي يحتاجها هذا الطلب
+function gpuNeed(engineId, opts) {
+  const e = state.engines.find(x => x.id === engineId);
+  if (!e?.gpu) return 60;
+  return opts?.texture && e.supports.textureToggle ? e.gpu.texture : e.gpu.shape;
+}
+
+// الخيارات اللي تكفيها الثواني الباقية بعد خطأ الحد المجاني
+function quotaOptions(job, err) {
+  const left = typeof err.left === 'number' ? err.left : 0;
+  const out = [];
+  if (job.opts?.texture && gpuNeed(job.engineId, { texture: false }) <= left && gpuNeed(job.engineId, job.opts) > left) {
+    out.push({ kind: 'notex' });
+  }
+  for (const e of state.engines) {
+    if (e.id === job.engineId) continue;
+    if (gpuNeed(e.id, { ...job.opts, texture: false }) <= left) out.push({ kind: 'engine', id: e.id });
+  }
+  return out;
 }
 
 function nextEngineFor(job) {
@@ -302,7 +333,22 @@ function retryTimeText(info) {
 function renderBanner() {
   const b = $('#pause-banner');
   if (!state.paused) { b.classList.add('hidden'); return; }
-  const { engineId, info } = state.paused;
+  const { engineId, info, exhausted } = state.paused;
+  if (exhausted) {
+    b.innerHTML = `<b>انوقف الطابور: الوقت المجاني خلص بكل المحركات</b>
+      <div>${esc(retryTimeText(info) || 'الحد يتجدد تدريجياً خلال ساعات.')}</div>
+      <div>${state.settings.hasToken ? 'التوكن موجود، بس وقت حسابك المجاني هم خلص.' : 'حط توكن مجاني وكمّل فوراً على حساب Hugging Face مالتك.'}</div>
+      <div class="btns">
+        ${state.settings.hasToken ? '' : '<button class="btn gold small" data-gotoken>حط توكن مجاني</button>'}
+        <button class="btn ghost small" data-resume>كمّل الطابور</button>
+        <button class="btn ghost small" data-stop>خليه واقف</button>
+      </div>`;
+    b.classList.remove('hidden');
+    $('[data-gotoken]', b)?.addEventListener('click', () => showView('settings'));
+    $('[data-resume]', b).addEventListener('click', () => { state.paused = null; renderBanner(); processQueue(); });
+    $('[data-stop]', b).addEventListener('click', () => b.classList.add('hidden'));
+    return;
+  }
   const others = state.engines.filter(e => e.id !== engineId);
   b.innerHTML = `<b>انوقف الطابور: ${esc(info.title)} (${esc(engineName(engineId))})</b>
     <div>${esc(retryTimeText(info))}</div>
@@ -326,16 +372,22 @@ function queueItemHTML(q) {
   let err = '';
   if (q.status === 'fail' && q.error) {
     const e = q.error;
-    const noTex = e.kind === 'quota' && q.opts?.texture && q.engineId !== 'trellis2';
+    const isQuota = e.kind === 'quota';
+    const opts = isQuota ? quotaOptions(q, e) : state.engines.filter(x => x.id !== q.engineId).map(x => ({ kind: 'engine', id: x.id }));
+    const btns = opts.map((o, i) => o.kind === 'notex'
+      ? '<button class="btn gold small" data-notex>أعد بدون تكستشر (يطلب وقت أقل)</button>'
+      : `<button class="btn ${i === 0 ? 'gold' : 'ghost'} small" data-fb="${o.id}">حوّل بـ ${esc(engineName(o.id))}</button>`).join('');
+    const tokenBtn = isQuota && !state.settings.hasToken
+      ? `<button class="btn ${opts.length ? 'ghost' : 'gold'} small" data-token>حط توكن مجاني</button>` : '';
     err = `
     <div class="qi-err">
       <b>${esc(e.title)}</b>
+      ${isQuota && !opts.length ? '<p>الوقت مشترك بين كل المحركات، فتبديل المحرك ما يفيد هسه.</p>' : ''}
       ${e.retryAt ? `<p class="when">${esc(retryTimeText(e))}</p>` : ''}
       <div class="btns">
-        ${noTex ? '<button class="btn gold small" data-notex>أعد بدون تكستشر (يطلب وقت أقل)</button>' : ''}
-        ${state.engines.filter(x => x.id !== q.engineId).map(x => `<button class="btn ${noTex ? 'ghost' : 'gold'} small" data-fb="${x.id}">حوّل بـ ${esc(x.name)}</button>`).join('')}
+        ${tokenBtn}
+        ${btns}
         <button class="btn ghost small" data-again>أعد المحاولة</button>
-        ${e.kind === 'quota' && !state.settings.hasToken ? '<button class="btn ghost small" data-token>حط توكن مجاني</button>' : ''}
       </div>
       <details><summary>ليش؟ والتفاصيل</summary><p>${esc(e.detail)}</p><p class="raw" dir="ltr">${esc(e.raw || '')}</p></details>
     </div>`;
@@ -635,8 +687,17 @@ function bindSettings() {
     fillSettings();
     $('#token-hint').classList.toggle('hidden', !!state.settings.hasToken);
     const s = $('#set-saved');
+    s.className = 'muted';
+    s.textContent = 'انحفظت ✓';
+    if (state.settings.hasToken) {
+      s.textContent = 'يتأكد من التوكن...';
+      const r = await ibra.checkToken();
+      s.className = r.ok ? 'ok' : 'err';
+      s.textContent = r.ok ? `انحفظت ✓ — التوكن شغّال على حساب ${r.name}` : `انحفظت، بس: ${r.message}`;
+    }
     s.classList.remove('hidden');
-    setTimeout(() => s.classList.add('hidden'), 2000);
+    renderQueue();
+    if (state.paused) renderBanner();
   });
 }
 

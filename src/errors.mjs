@@ -48,14 +48,13 @@ export function explainError(err) {
     // مثال حقيقي: "You have exceeded your ZeroGPU quota (120s requested vs. 159s left). Try again in 23:54:13."
     const q = raw.match(/\((\d+)\s*s\s*requested\s*vs\.?\s*(\d+)\s*s\s*left\)/i);
     const lines = [
-      'Hugging Face يعطي كل مستخدم وقت معالجة مجاني محدود (ZeroGPU)، والوقت مشترك بين كل المحركات.'
+      'Hugging Face يعطي كل مستخدم وقت معالجة مجاني محدود (ZeroGPU)، والوقت مشترك بين كل المحركات: إذا خلص بمحرك، خلص بالكل.'
     ];
-    if (q) {
-      lines.push(`هذا المحرك طلب ${q[1]} ثانية، والباقي عندك ${q[2]} ثانية بس، فرفض يبدأ.`);
-      lines.push('محرك يطلب وقت أقل ممكن يشتغل: Hunyuan3D 2.1 بدون تكستشر يطلب حوالي 60 ثانية.');
-    }
+    if (q) lines.push(`هذا المحرك طلب ${q[1]} ثانية، والباقي عندك ${q[2]} ثانية بس، فرفض يبدأ.`);
+    if (q && +q[2] >= 60) lines.push('الباقي يكفي لمحرك يطلب وقت أقل: Hunyuan3D بدون تكستشر يطلب حوالي 60 ثانية.');
+    else lines.push('الوقت المجاني خلص تقريباً كله، فتبديل المحرك ما راح يفيد هسه.');
     lines.push(when || 'الحد يتجدد تدريجياً، جرّب بعد كم ساعة.');
-    lines.push('حتى تزيد العدد اليومي: حط توكن Hugging Face من حساب مجاني بالإعدادات.');
+    lines.push('الحل الأسرع: توكن Hugging Face من حساب مجاني بالإعدادات، يحسب الوقت على حسابك بدل شبكة الإنترنت.');
     return {
       kind: 'quota', raw, retryAt, canFallback: true,
       requested: q ? +q[1] : null, left: q ? +q[2] : null,

@@ -133,6 +133,21 @@ ipcMain.handle('settings:save', (_e, s) => {
 
 ipcMain.handle('engines:list', () => ENGINES);
 
+// يتأكد إن التوكن صالح ويرجع اسم الحساب
+ipcMain.handle('token:check', async () => {
+  const { token } = loadSettings();
+  if (!token) return { ok: false, message: 'ماكو توكن محفوظ' };
+  try {
+    const r = await net.fetch('https://huggingface.co/api/whoami-v2', { headers: { Authorization: `Bearer ${token}` } });
+    if (r.status === 401) return { ok: false, message: 'التوكن مرفوض — تأكد إنك نسخته كامل' };
+    if (!r.ok) return { ok: false, message: `Hugging Face رجّع ${r.status}` };
+    const j = await r.json();
+    return { ok: true, name: j.name || j.fullname || '' };
+  } catch (e) {
+    return { ok: false, message: 'ما كدرت أوصل لـ Hugging Face للتحقق' };
+  }
+});
+
 ipcMain.handle('dialog:images', async () => {
   const r = await dialog.showOpenDialog(win, {
     title: 'اختر صور',
