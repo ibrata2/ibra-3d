@@ -52,7 +52,7 @@ async function init() {
   bindLibrary();
   bindSettings();
   $$('[data-url]').forEach(b => b.addEventListener('click', () => ibra.openExternal(b.dataset.url)));
-  $('#version').textContent = 'الإصدار 1.0.3';
+  $('#version').textContent = 'الإصدار 1.0.4';
 
   ibra.onProgress(onProgress);
 }
@@ -257,7 +257,7 @@ async function runOne(job) {
     job.result = res;
     const iso = (t) => '\u2068' + t + '\u2069';
     job.text = [res.engine, res.triangles ? Math.round(res.triangles / 1000) + 'K مضلع' : null, res.sizeKb + ' KB', 'seed ' + (res.seed ?? '-'),
-      job.opts?.quality === 'high' ? 'جودة عالية' : null].filter(Boolean).map(iso).join(' · ');
+      res.textured ? 'ملوّن' : 'بدون ألوان', job.opts?.quality === 'high' ? 'جودة عالية' : null].filter(Boolean).map(iso).join(' · ');
     if (!state.selected || selectedItem()?.status !== 'done') state.selected = job.id;
     if (state.selected === job.id) showResult(job);
   } else {

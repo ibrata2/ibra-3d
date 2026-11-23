@@ -162,23 +162,34 @@ async function convertHunyuan(app, blob, opts, token, progress, statusMapper, en
   const texFile = texture ? unwrap(out[1]) : null;
   const usedSeed = unwrap(texture ? out[4] : out[3]);
 
-  progress(82, 'converting', 'يقلل المضلعات ويصدّر GLB...');
-  const faces = Math.max(1000, Math.min(1_000_000, Math.round(+opts.faces || 30000)));
   let glb = null;
-  try {
-    const ex = await runJob(app, '/on_export_click', {
-      file_out: meshFile,
-      file_out2: texFile,
-      file_type: 'glb',
-      reduce_face: true,
-      export_texture: texture,
-      target_face_num: faces
-    }, () => {});
-    const url = fileUrl(ex[1]);
-    if (url) glb = await download(url, token);
-  } catch (e) {
-    // إذا فشل التصدير نرجع الملف الأصلي إذا كان GLB
-    progress(88, 'converting', 'التصدير فشل، يستخدم الملف الأصلي...');
+  // مع التكستشر: ناخذ الملف الملوّن مثل ما هو. تقليل المضلعات بعد التلوين يخرّب خريطة الألوان (UV)،
+  // والمحرك أصلاً يقلل المجسم قبل التلوين (حوالي 40 ألف مضلع).
+  if (texture && texFile) {
+    progress(85, 'converting', 'ينزّل المجسم الملوّن...');
+    const url = fileUrl(texFile);
+    if (url) {
+      try { glb = await download(url, token); } catch { glb = null; }
+    }
+  }
+  if (!isGlb(glb)) {
+    progress(82, 'converting', 'يقلل المضلعات ويصدّر GLB...');
+    const faces = Math.max(1000, Math.min(1_000_000, Math.round(+opts.faces || 30000)));
+    try {
+      const ex = await runJob(app, '/on_export_click', {
+        file_out: meshFile,
+        file_out2: texFile,
+        file_type: 'glb',
+        reduce_face: !texture,
+        export_texture: texture,
+        target_face_num: faces
+      }, () => {});
+      const url = fileUrl(unwrap(ex[1]));
+      if (url) glb = await download(url, token);
+    } catch (e) {
+      // إذا فشل التصدير نرجع الملف الأصلي إذا كان GLB
+      progress(88, 'converting', 'التصدير فشل، يستخدم الملف الأصلي...');
+    }
   }
   if (!isGlb(glb)) {
     const src = texFile || meshFile;

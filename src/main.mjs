@@ -193,7 +193,8 @@ ipcMain.handle('convert:run', async (_e, job) => {
       seed: res.seed,
       engine: engineById(res.engine).name,
       sizeKb: Math.round(glb.length / 1024),
-      triangles: stats ? Math.round(stats.triangles) : null
+      triangles: stats ? Math.round(stats.triangles) : null,
+      textured: stats ? stats.textures > 0 : false
     };
   } catch (err) {
     if (cancelled.has(id)) { cancelled.delete(id); return { ok: false, cancelled: true }; }
