@@ -39,6 +39,7 @@ async function init() {
   $('#opt-texture').checked = s.texture;
   $('#opt-faces').value = s.faces;
   $('#opt-seed').value = s.seed;
+  $('#opt-quality').value = s.quality || 'normal';
   updateEngineUI();
   markFacePreset();
   $('#token-hint').classList.toggle('hidden', !!s.hasToken);
@@ -51,7 +52,7 @@ async function init() {
   bindLibrary();
   bindSettings();
   $$('[data-url]').forEach(b => b.addEventListener('click', () => ibra.openExternal(b.dataset.url)));
-  $('#version').textContent = 'الإصدار 1.0.2';
+  $('#version').textContent = 'الإصدار 1.0.3';
 
   ibra.onProgress(onProgress);
 }
@@ -86,6 +87,7 @@ function currentOpts() {
     rembg: $('#opt-rembg').checked,
     texture: $('#opt-texture').checked,
     faces: Math.max(1000, Math.min(500000, parseInt($('#opt-faces').value, 10) || 30000)),
+    quality: $('#opt-quality').value,
     seed: seed === '' ? '' : parseInt(seed, 10)
   };
 }
@@ -105,7 +107,7 @@ function markFacePreset() {
 
 function persistOpts() {
   const o = currentOpts();
-  ibra.saveSettings({ engine: $('#opt-engine').value, rembg: o.rembg, texture: o.texture, faces: o.faces, seed: o.seed });
+  ibra.saveSettings({ engine: $('#opt-engine').value, rembg: o.rembg, texture: o.texture, faces: o.faces, seed: o.seed, quality: o.quality });
 }
 
 // ---------------- التحويل والطابور ----------------
@@ -130,7 +132,7 @@ function bindConvert() {
   });
 
   $('#opt-engine').addEventListener('change', () => { updateEngineUI(); persistOpts(); });
-  ['#opt-rembg', '#opt-texture', '#opt-seed'].forEach(s => $(s).addEventListener('change', persistOpts));
+  ['#opt-rembg', '#opt-texture', '#opt-seed', '#opt-quality'].forEach(s => $(s).addEventListener('change', persistOpts));
   $('#opt-faces').addEventListener('change', () => { markFacePreset(); persistOpts(); });
   $$('.faces-presets button').forEach(b => b.addEventListener('click', () => {
     $('#opt-faces').value = b.dataset.f; markFacePreset(); persistOpts();
@@ -253,7 +255,9 @@ async function runOne(job) {
     job.status = 'done';
     job.pct = 100;
     job.result = res;
-    job.text = `${res.engine} · ${res.triangles ? Math.round(res.triangles / 1000) + 'K مضلع · ' : ''}${res.sizeKb} KB · seed ${res.seed ?? '-'}`;
+    const iso = (t) => '\u2068' + t + '\u2069';
+    job.text = [res.engine, res.triangles ? Math.round(res.triangles / 1000) + 'K مضلع' : null, res.sizeKb + ' KB', 'seed ' + (res.seed ?? '-'),
+      job.opts?.quality === 'high' ? 'جودة عالية' : null].filter(Boolean).map(iso).join(' · ');
     if (!state.selected || selectedItem()?.status !== 'done') state.selected = job.id;
     if (state.selected === job.id) showResult(job);
   } else {

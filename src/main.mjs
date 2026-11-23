@@ -37,6 +37,7 @@ function loadSettings() {
     rembg: s.rembg ?? true,
     texture: s.texture ?? false,
     faces: s.faces ?? 30000,
+    quality: s.quality || 'normal',
     seed: s.seed ?? '',
     autoFallback: s.autoFallback ?? false
   };

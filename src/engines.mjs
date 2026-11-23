@@ -143,9 +143,10 @@ async function convertHunyuan(app, blob, opts, token, progress, statusMapper, en
     steps: 30,
     guidance_scale: 5,
     seed,
-    octree_resolution: 256,
+    // نفس أوضاع Decoding بواجهة الـ Space: Standard = 256 و High = 384
+    octree_resolution: opts.quality === 'high' ? 384 : 256,
     check_box_rembg: !!opts.rembg,
-    num_chunks: 8000,
+    num_chunks: opts.quality === 'high' ? 20000 : 8000,
     randomize_seed: random
   };
   if (engine.id === 'hunyuan2') params.caption = null;
