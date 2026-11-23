@@ -22,6 +22,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -33,6 +35,18 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      # electron-builder ما يكدر ينشر release بدون tag موجود، فنسوي الـ tag أولاً
+      - name: Create tag v<version> if missing
+        shell: bash
+        run: |
+          V="v$(node -p "require('./package.json').version")"
+          git fetch --tags --quiet
+          if git rev-parse -q --verify "refs/tags/$V" >/dev/null; then
+            echo "tag $V exists"
+          else
+            git tag "$V" && git push origin "$V"
+          fi
 
       - name: Build NSIS installer and publish to Releases
         run: npx electron-builder --win nsis --publish always

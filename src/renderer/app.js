@@ -41,6 +41,8 @@ async function init() {
   $('#opt-seed').value = s.seed;
   updateEngineUI();
   markFacePreset();
+  $('#token-hint').classList.toggle('hidden', !!s.hasToken);
+  $('#token-hint').addEventListener('click', () => showView('settings'));
 
   $('#sv-type').innerHTML = state.types.map(t => `<option value="${t.prefix}">${t.prefix} — ${esc(t.ar)}</option>`).join('');
 
@@ -49,7 +51,7 @@ async function init() {
   bindLibrary();
   bindSettings();
   $$('[data-url]').forEach(b => b.addEventListener('click', () => ibra.openExternal(b.dataset.url)));
-  $('#version').textContent = 'الإصدار 1.0.0';
+  $('#version').textContent = 'الإصدار 1.0.1';
 
   ibra.onProgress(onProgress);
 }
@@ -214,7 +216,7 @@ function retryWith(item, engineId) {
     engineId,
     status: 'wait', pct: 0, text: '', result: null, error: null
   };
-  const idx = state.queue.indexOf(item);
+  const idx = state.queue.findIndex(x => x.id === item.id);
   state.queue.splice(idx + 1, 0, copy);
   state.selected = copy.id;
   state.paused = null;
@@ -321,28 +323,35 @@ function renderBanner() {
 }
 
 function queueItemHTML(q) {
-  const err = q.status === 'fail' && q.error ? `
+  let err = '';
+  if (q.status === 'fail' && q.error) {
+    const e = q.error;
+    const noTex = e.kind === 'quota' && q.opts?.texture && q.engineId !== 'trellis2';
+    err = `
     <div class="qi-err">
-      <b>${esc(q.error.title)}</b>
-      <p>${esc(q.error.detail)}</p>
-      ${q.error.retryAt ? `<p>${esc(retryTimeText(q.error))}</p>` : ''}
+      <b>${esc(e.title)}</b>
+      ${e.retryAt ? `<p class="when">${esc(retryTimeText(e))}</p>` : ''}
       <div class="btns">
-        ${state.engines.filter(e => e.id !== q.engineId).map(e => `<button class="btn gold small" data-fb="${e.id}">حوّل بـ ${esc(e.name)}</button>`).join('')}
+        ${noTex ? '<button class="btn gold small" data-notex>أعد بدون تكستشر (يطلب وقت أقل)</button>' : ''}
+        ${state.engines.filter(x => x.id !== q.engineId).map(x => `<button class="btn ${noTex ? 'ghost' : 'gold'} small" data-fb="${x.id}">حوّل بـ ${esc(x.name)}</button>`).join('')}
         <button class="btn ghost small" data-again>أعد المحاولة</button>
+        ${e.kind === 'quota' && !state.settings.hasToken ? '<button class="btn ghost small" data-token>حط توكن مجاني</button>' : ''}
       </div>
-    </div>` : '';
+      <details><summary>ليش؟ والتفاصيل</summary><p>${esc(e.detail)}</p><p class="raw" dir="ltr">${esc(e.raw || '')}</p></details>
+    </div>`;
+  }
   return `
     <img src="${esc(q.url)}" alt="" loading="lazy">
-    <div>
+    <div class="qi-body">
       <div class="qi-top">
         <span class="qi-name" title="${esc(q.name)}">${esc(q.name)}</span>
         <span class="st ${q.status}">${STATUS[q.status]}</span>
         ${q.status === 'wait' || q.status === 'done' || q.status === 'fail' ? '<button class="qi-x" title="شيل من الطابور" data-rm>✕</button>' : ''}
       </div>
       <div class="bar"><b style="width:${q.pct}%"></b></div>
-      <div class="qi-sub">${q.status === 'done' ? esc(q.text) : esc(engineName(q.engineId)) + (q.text ? ' · ' + esc(q.text) : '')}</div>
-      ${err}
-    </div>`;
+      <div class="qi-sub">${q.status === 'done' ? esc(q.text) : esc(engineName(q.engineId)) + (q.opts?.texture && q.engineId !== 'trellis2' ? ' · تكستشر' : '') + (q.text ? ' · ' + esc(q.text) : '')}</div>
+    </div>
+    ${err}`;
 }
 
 function renderQueue() {
@@ -382,6 +391,9 @@ $('#queue').addEventListener('click', (e) => {
   const fb = e.target.closest('[data-fb]');
   if (fb) return retryWith(q, fb.dataset.fb);
   if (e.target.closest('[data-again]')) return retryWith(q, q.engineId);
+  if (e.target.closest('[data-notex]')) return retryWith({ ...q, opts: { ...q.opts, texture: false } }, q.engineId);
+  if (e.target.closest('[data-token]')) return showView('settings');
+  if (e.target.closest('details')) return;
   state.selected = q.id;
   showResult(q);
   renderQueue();
@@ -621,6 +633,7 @@ function bindSettings() {
     await ibra.saveSettings({ token, autoFallback: $('#set-fallback').checked });
     state.settings = await ibra.getSettings();
     fillSettings();
+    $('#token-hint').classList.toggle('hidden', !!state.settings.hasToken);
     const s = $('#set-saved');
     s.classList.remove('hidden');
     setTimeout(() => s.classList.add('hidden'), 2000);

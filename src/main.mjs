@@ -35,7 +35,7 @@ function loadSettings() {
     libraryDir: s.libraryDir || '',
     engine: s.engine || 'hunyuan21',
     rembg: s.rembg ?? true,
-    texture: s.texture ?? true,
+    texture: s.texture ?? false,
     faces: s.faces ?? 30000,
     seed: s.seed ?? '',
     autoFallback: s.autoFallback ?? false
